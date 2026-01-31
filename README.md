@@ -36,7 +36,7 @@ config.txt → Workload definition
 
 ---
 
-## 📥 Process Configuration (`config.txt`)
+## Process Configuration (`config.txt`)
 Each line defines a process:
     PID, Priority, ArrivalTime, Duration, MaxClaimVector
 For example:
