@@ -1,0 +1,10 @@
+# PID, Priority, Arrival, Duration, Claim
+Test-PIP-LOW,   10,  0.0,  2.0,  1 0 0
+Test-PIP-HIGH,  90,  0.5,  1.0,  1 0 0
+Test-HOLDER,    50,  3.0,  3.0,  0 1 0
+Test-GREEDY,    40,  3.2,  1.0,  1 2 1
+Test-DEADLOCK-A, 30,  7.0,  2.0,  0 2 0
+Test-DEADLOCK-B, 30,  7.0,  2.0,  0 2 0
+Test-STRESS-1,   20, 10.0,  1.5,  1 0 0
+Test-STRESS-2,   20, 10.0,  1.5,  0 1 0
+Test-STRESS-3,   20, 10.0,  1.5,  0 0 1
