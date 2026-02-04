@@ -11,7 +11,7 @@ class ResourceManager:
         self.max_claim = {}
         self.allocation = {}
 
-        # Kernel lock with Priority Inheritance
+        # kernel lock with Priority Inheritance
         self.lock = MyPriorityMutex(self.logger)
 
     def register_process(self, pid, max_claim_vector):
@@ -33,7 +33,7 @@ class ResourceManager:
         """
         self.lock.acquire()
         try:
-            # Check request <= available
+            # checking request (available or not)
             for i in range(len(request_vector)):
                 if request_vector[i] > self.available[i]:
                     self.logger.log_event(
@@ -43,7 +43,7 @@ class ResourceManager:
                     )
                     return False
 
-            # Banker's safety check
+            # Banker safety check
             if not self._can_allocate_safely(pid, request_vector):
                 self.logger.log_event(
                     "REQUEST",
@@ -52,7 +52,7 @@ class ResourceManager:
                 )
                 return False
 
-            # Grant request
+            # grant request
             for i in range(len(request_vector)):
                 self.available[i] -= request_vector[i]
                 self.allocation[pid][i] += request_vector[i]
@@ -112,20 +112,17 @@ class ResourceManager:
         """
         Banker's Safety Algorithm.
         """
-        # Copy available resources
         work = self.available[:]
-
-        # Finish flags
         finish = {p: False for p in self.max_claim}
 
-        # Simulated allocation
+        # simulated allocation
         alloc_copy = {p: self.allocation[p][:] for p in self.allocation}
         alloc_copy[pid] = [
             alloc_copy[pid][i] + request_vector[i]
             for i in range(len(work))
         ]
 
-        # Simulated available after allocation
+        # simulated available after allocation
         work = [
             work[i] - request_vector[i]
             for i in range(len(work))
@@ -144,7 +141,7 @@ class ResourceManager:
                 ]
 
                 if all(need[i] <= work[i] for i in range(len(work))):
-                    # Process p can finish
+                    # process p can finish and it is safe
                     work = [
                         work[i] + alloc_copy[p][i]
                         for i in range(len(work))

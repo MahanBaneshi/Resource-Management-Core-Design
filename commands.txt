@@ -1,0 +1,1 @@
+python simulation_bare.py > output.txt 2>&1
