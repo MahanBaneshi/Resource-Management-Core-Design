@@ -40,3 +40,9 @@ STRESS-2,    20, 13.0,  1.5,  0 1 0
 STRESS-3,    20, 13.0,  1.5,  0 0 1
 STRESS-4,    35, 13.1,  1.5,  1 1 0
 STRESS-5,    60, 13.2,  1.5,  0 1 1
+
+# =========================
+# BANKER FORCED-UNSAFE (must produce DENIED (Unsafe))
+# =========================
+FORCE-UNSAFE-A, 55, 21.0, 3.0,  1 1 0
+FORCE-UNSAFE-B, 54, 21.0, 3.0,  1 1 0

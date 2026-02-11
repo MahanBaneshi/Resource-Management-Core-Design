@@ -17,46 +17,68 @@ class MySemaphore:
             self.value += 1
             self.cond.notify()
 
-
 class MyPriorityMutex:
-    """
-    A Mutex that implements the Priority Inheritance Protocol (PIP).
-    """
     def __init__(self, logger=None):
         self.owner = None
         self.logger = logger
         self.lock = Lock()
         self.cond = Condition(self.lock)
+        self.waiters = []
+
+    def _prio(self, t):
+        if hasattr(t, "effective_priority"):
+            return t.effective_priority
+        if hasattr(t, "priority"):
+            return t.priority
+        return 0
 
     def acquire(self):
         with self.cond:
             me = current_thread()
+            if me not in self.waiters:
+                self.waiters.append(me)
 
-            while self.owner is not None:
-                if hasattr(me, "effective_priority") and hasattr(self.owner, "effective_priority"):
-                    if me.effective_priority > self.owner.effective_priority:
-                        self.owner.boost_priority(me.effective_priority)
-                        if self.logger:
-                            self.logger.log_event(
-                                "PIP-BOOST",
-                                self.owner.name,
-                                f"Inherited priority {me.effective_priority} from {me.name}"
-                            )
+            while True:
+                if self.owner is not None:
+                    # PIP boost
+                    if hasattr(me, "effective_priority") and hasattr(self.owner, "effective_priority"):
+                        if me.effective_priority > self.owner.effective_priority:
+                            self.owner.boost_priority(me.effective_priority)
+                            if self.logger:
+                                self.logger.log_event(
+                                    "PIP-BOOST",
+                                    self.owner.name,
+                                    f"Inherited {me.effective_priority} from {me.name}"
+                                )
+                    self.cond.wait()
+                    continue
+
+                # Priority pick
+                max_p = max(self._prio(w) for w in self.waiters) if self.waiters else self._prio(me)
+                winner = None
+                for w in self.waiters:
+                    if self._prio(w) == max_p:
+                        winner = w
+                        break
+
+                if winner is me:
+                    self.owner = me
+                    try:
+                        self.waiters.remove(me)
+                    except ValueError:
+                        pass
+                    return
+
                 self.cond.wait()
-
-            self.owner = me
 
     def release(self):
         with self.cond:
             if self.owner != current_thread():
                 return
-
             if hasattr(self.owner, "restore_priority"):
                 self.owner.restore_priority()
-
             self.owner = None
             self.cond.notify_all()
-
 
 class MyBarrier:
     def __init__(self, count):

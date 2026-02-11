@@ -1,7 +1,6 @@
 import time
 from primitives_bare import MyPriorityMutex
 
-
 class ResourceManager:
     def __init__(self, total_resources, logger):
         self.total = list(total_resources)
@@ -26,50 +25,49 @@ class ResourceManager:
             self.lock.release()
 
     def request_resources(self, pid, request_vector):
-        """
-        Request resources.
-        MUST check for Safety (Banker's Algo) before granting.
-        Return True if granted, False if denied (unsafe).
-        """
         self.lock.acquire()
         try:
-            # checking request (available or not)
-            for i in range(len(request_vector)):
-                if request_vector[i] > self.available[i]:
+            if pid not in self.max_claim or pid not in self.allocation:
+                self.logger.log_event("REQUEST", pid, "REJECTED (Unknown PID)")
+                return False
+
+            n = len(self.total)
+
+            need = [self.max_claim[pid][i] - self.allocation[pid][i] for i in range(n)]
+
+            # req <= need
+            for i in range(n):
+                if request_vector[i] < 0 or request_vector[i] > need[i]:
                     self.logger.log_event(
                         "REQUEST",
                         pid,
-                        "DENIED (Not enough resources)"
+                        f"REJECTED (Exceeds need) req={request_vector} need={need}"
                     )
                     return False
 
-            # Banker safety check
+            # req <= available
+            for i in range(n):
+                if request_vector[i] > self.available[i]:
+                    # NOTE: do NOT include "DENIED" here
+                    self.logger.log_event("REQUEST", pid, "BLOCKED (Not enough resources)")
+                    return False
+
+            # banker safety
             if not self._can_allocate_safely(pid, request_vector):
-                self.logger.log_event(
-                    "REQUEST",
-                    pid,
-                    "DENIED (Unsafe)"
-                )
+                # NOTE: keep "DENIED" only for safety
+                self.logger.log_event("REQUEST", pid, "DENIED (Unsafe)")
                 return False
 
-            # grant request
-            for i in range(len(request_vector)):
+            for i in range(n):
                 self.available[i] -= request_vector[i]
                 self.allocation[pid][i] += request_vector[i]
 
-            self.logger.log_event(
-                "REQUEST",
-                pid,
-                f"GRANTED {request_vector}"
-            )
-
-            self.logger.print_matrix_snapshot(
-                self.allocation, self.available, self.total
-            )
-
+            self.logger.log_event("REQUEST", pid, f"GRANTED {request_vector}")
+            self.logger.print_matrix_snapshot(self.allocation, self.available, self.total)
             return True
         finally:
             self.lock.release()
+
 
     def release_resources(self, pid, release_vector):
         """

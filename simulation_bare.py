@@ -110,38 +110,31 @@ class PriorityThread(threading.Thread):
         self.effective_priority = self.base_priority
         self.priority = self.base_priority
 
-
 def process_behavior(pid, kernel, work_time, max_claim):
-    """
-    Behavior of each simulated process.
-    """
-    thread = threading.current_thread()
-
-    # Register process
     kernel.register_process(pid, max_claim)
 
     allocated = [0] * len(max_claim)
 
-    # Try to acquire full claim gradually
+    # gradual acquire
     while allocated != max_claim:
-        request = [
-            max_claim[i] - allocated[i]
-            for i in range(len(max_claim))
-        ]
+        remaining = [max_claim[i] - allocated[i] for i in range(len(max_claim))]
+        request = [1 if remaining[i] > 0 else 0 for i in range(len(remaining))]
 
-        granted = kernel.request_resources(pid, request)
-        if granted:
-            allocated = max_claim[:]
+        if kernel.request_resources(pid, request):
+            for i in range(len(allocated)):
+                allocated[i] += request[i]
         else:
             time.sleep(0.2)
 
-    # Simulate work (holding resources)
     time.sleep(work_time / 2)
 
-    # Simulate kernel busy section (to trigger PIP)
-    kernel.execute_long_kernel_task(pid, work_time / 2)
+    # hold kernel only for PIP actors
+    should_hold = (pid.endswith("-LOW") or pid in ("CHAIN-A", "CHAIN-B"))
+    if should_hold:
+        kernel.execute_long_kernel_task(pid, work_time / 2)
+    else:
+        time.sleep(work_time / 2)
 
-    # Release all resources
     kernel.release_resources(pid, allocated)
 
 
